@@ -8,7 +8,7 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 
 class YoutubeApiRepository {
-    val subs: CompositeDisposable = CompositeDisposable()
+    private val subs: CompositeDisposable = CompositeDisposable()
     private val service by lazy {
         YoutubeApiService.init()
     }

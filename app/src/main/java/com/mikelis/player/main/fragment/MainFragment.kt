@@ -79,8 +79,7 @@ class MainFragment : ParentFragment() {
 
     private fun startVideo(){
         if (::ytPlayer.isInitialized && videoId != null) {
-            var time = youtubeViewModel.getLastPlayTime()
-            ytPlayer.loadVideo(videoId!!, time)
+            ytPlayer.loadVideo(videoId!!, youtubeViewModel.getLastPlayTime())
         }
     }
 
