@@ -51,6 +51,10 @@ class MainFragment : ParentFragment() {
 
     override fun setViews() {
         search_edit_text.setText(youtubeViewModel.getKeyword())
+        search_edit_text.text.apply {
+            search_edit_text.setSelection(this.toString().length)
+        }
+
     }
 
     override fun setListeners() {
