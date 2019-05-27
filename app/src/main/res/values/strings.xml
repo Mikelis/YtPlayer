@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Player</string>
+    <string name="search_hint">Search…</string>
+    <string name="error_text">Error retrieving data</string>
+</resources>
