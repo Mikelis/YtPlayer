@@ -12,8 +12,8 @@ abstract class ParentFragment: Fragment(){
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         injectDependencies()
-        setViews()
         setListeners()
+        setViews()
     }
     open fun setViews() {
 

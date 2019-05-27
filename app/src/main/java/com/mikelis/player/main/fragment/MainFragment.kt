@@ -7,15 +7,16 @@ import android.view.View
 import android.widget.Toast
 import androidx.annotation.NonNull
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import com.mikelis.player.R
 import com.mikelis.player.common.ParentFragment
+import com.mikelis.player.common.depinject.FragmentModule
 import com.mikelis.player.main.depinject.DaggerYoutubeApiComponent
 import com.mikelis.player.main.depinject.YoutubeApiModule
 import com.mikelis.player.main.repository.model.VideoResponse
 import com.mikelis.player.main.viewmodel.YoutubeApiViewModel
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import io.reactivex.BackpressureStrategy
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -27,13 +28,13 @@ import javax.inject.Inject
 
 
 class MainFragment : ParentFragment() {
-    lateinit var youtubeViewModel: YoutubeApiViewModel
     @Inject
-    lateinit var viewModelFactory: YoutubeApiViewModel.Factory
+    lateinit var youtubeViewModel: YoutubeApiViewModel
     private val TAG = "MainFragment"
     private val subs: CompositeDisposable = CompositeDisposable()
     lateinit var ytPlayer: YouTubePlayer
     var videoId: String? = null
+    val youTubeTracker = YouTubePlayerTracker()
 
     private val searchQueryChange: BehaviorSubject<String> = BehaviorSubject.create()
 
@@ -43,13 +44,12 @@ class MainFragment : ParentFragment() {
 
     override fun injectDependencies() {
         DaggerYoutubeApiComponent.builder()
-            .youtubeApiModule(YoutubeApiModule())
-            .build().inject(this)
-        youtubeViewModel = ViewModelProviders.of(this, viewModelFactory)
-            .get(YoutubeApiViewModel::class.java)
+                .youtubeApiModule(YoutubeApiModule())
+                .fragmentModule(FragmentModule(this))
+                .build().inject(this)
     }
 
-    override fun setViews(){
+    override fun setViews() {
         search_edit_text.setText(youtubeViewModel.getKeyword())
     }
 
@@ -71,23 +71,29 @@ class MainFragment : ParentFragment() {
         youtube_player_view.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(@NonNull youTubePlayer: YouTubePlayer) {
                 ytPlayer = youTubePlayer
-                if (videoId != null) {
-                    youTubePlayer.loadVideo(videoId!!, 0f)
-                }
+                ytPlayer.addListener(youTubeTracker)
+                startVideo()
             }
         })
     }
 
+    private fun startVideo(){
+        if (::ytPlayer.isInitialized && videoId != null) {
+            var time = youtubeViewModel.getLastPlayTime()
+            ytPlayer.loadVideo(videoId!!, time)
+        }
+    }
+
     private fun setSearchListener() {
         subs.add(
-            searchQueryChange.toFlowable(BackpressureStrategy.LATEST).toObservable()
-                .debounce(300, TimeUnit.MILLISECONDS)
-                .distinctUntilChanged()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ result ->
-                    search(result)
-                }, { t: Throwable? -> Log.v(TAG, t?.message) })
+                searchQueryChange.toFlowable(BackpressureStrategy.LATEST).toObservable()
+                        .debounce(300, TimeUnit.MILLISECONDS)
+                        .distinctUntilChanged()
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({ result ->
+                            search(result)
+                        }, { t: Throwable? -> Log.v(TAG, t?.message) })
         )
     }
 
@@ -97,16 +103,20 @@ class MainFragment : ParentFragment() {
                 it.State == VideoResponse.Companion.State.OK -> {
                     progress_bar.visibility = View.INVISIBLE
                     videoId = it.videos?.items?.get(0)?.id?.videoId
-                    if (::ytPlayer.isInitialized && videoId != null) {
-                        ytPlayer.loadVideo(videoId!!, 0f)
-                    }
+                    startVideo()
                 }
                 it.State == VideoResponse.Companion.State.FAIL -> {
                     progress_bar.visibility = View.INVISIBLE
-                    Toast.makeText(context, resources.getString(R.string.error_text), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.error_text),
+                            Toast.LENGTH_SHORT).show()
                 }
                 it.State == VideoResponse.Companion.State.LOADING -> {
                     progress_bar.visibility = View.VISIBLE
+                }
+                it.State == VideoResponse.Companion.State.EMPTY -> {
+                    progress_bar.visibility = View.INVISIBLE
+                    Toast.makeText(context, resources.getString(R.string.no_hits),
+                            Toast.LENGTH_SHORT).show()
                 }
             }
         })
@@ -115,5 +125,12 @@ class MainFragment : ParentFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         subs.clear()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (::ytPlayer.isInitialized) {
+            youtubeViewModel.setLastPlayTime(youTubeTracker.currentSecond)
+        }
     }
 }

@@ -9,14 +9,26 @@ import javax.inject.Inject
 
 class YoutubeApiViewModel @Inject constructor(private val repository: YoutubeApiRepository) : ViewModel() {
     private var searchKeyWord = "drones"
+    private var lastPlayTime = 0f
 
     fun search(keyword: String): MutableLiveData<VideoResponse> {
+        if(keyword != searchKeyWord){
+            lastPlayTime = 0f
+        }
         searchKeyWord = keyword
         return repository.search(keyword)
     }
 
     fun getKeyword(): String {
         return searchKeyWord
+    }
+
+    fun getLastPlayTime(): Float {
+        return lastPlayTime
+    }
+
+    fun setLastPlayTime(time : Float) {
+        lastPlayTime = time
     }
 
     override fun onCleared() {

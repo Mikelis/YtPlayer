@@ -21,7 +21,13 @@ class YoutubeApiRepository {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({
-                    data.value = VideoResponse(it, VideoResponse.Companion.State.OK)
+                    if(it.items.isEmpty()){
+                        data.value = VideoResponse(it, VideoResponse.Companion.State.EMPTY)
+                    }
+                    else{
+                        data.value = VideoResponse(it, VideoResponse.Companion.State.OK)
+                    }
+
                 }, {
                     data.value = VideoResponse(null, VideoResponse.Companion.State.FAIL)
                 })

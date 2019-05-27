@@ -2,4 +2,6 @@
     <string name="app_name">Player</string>
     <string name="search_hint">Search…</string>
     <string name="error_text">Error retrieving data</string>
+    <string name="no_hits">No video matching search</string>
+    <string name="title">Enter a keyword and the first matching video will start playing, if there is at least one video</string>
 </resources>
